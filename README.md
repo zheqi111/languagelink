@@ -51,7 +51,7 @@ Returns `{ "detected_source": "English", "translations": { "es": "…", "fr": "�
 Returns `{ "extracted_text": "…", "detected_source": "…", "translations": { … } }`
 
 ### `GET /api/health`
-Returns `{ "ok": true, "model": "claude-sonnet-4-6" }`
+Returns `{ "ok": true, "model": "claude-haiku-4-5" }`
 
 The backend enforces: 1–5 valid target languages, 5,000-character text limit, PNG/JPEG/WebP images only, and a light rate limit of 30 requests/minute per IP.
 
@@ -73,4 +73,4 @@ Set in `.env`:
 |----------|---------|---------|
 | `ANTHROPIC_API_KEY` | — (required) | Your Anthropic API key |
 | `PORT` | `3000` | Server port |
-| `CLAUDE_MODEL` | `claude-sonnet-4-6` | Model used for translation |
+| `CLAUDE_MODEL` | `claude-haiku-4-5` | Model used for translation |

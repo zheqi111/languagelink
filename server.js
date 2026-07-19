@@ -23,7 +23,7 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.ANTHROPIC_API_KEY;
-const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-4-6";
+const MODEL = process.env.CLAUDE_MODEL || "claude-haiku-4-5";
 
 if (!API_KEY) {
   console.error("Missing ANTHROPIC_API_KEY. Copy .env.example to .env and add your key.");
@@ -88,6 +88,7 @@ async function callClaude(content) {
     body: JSON.stringify({
       model: MODEL,
       max_tokens: 2000,
+      temperature: 0.2, // low randomness = consistent, faithful translations
       messages: [{ role: "user", content }],
     }),
   });
