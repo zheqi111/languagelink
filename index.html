@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LanguageLink — Translate anything, five languages at once</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F1F3F8;
+  --card:#FFFFFF;
+  --ink:#0E1B3D;
+  --ink-soft:#4A5670;
+  --cobalt:#2244D9;
+  --cobalt-deep:#182F9E;
+  --saffron:#F2A50C;
+  --rose:#E23D3D;
+  --line:#D9DEE9;
+  --radius:14px;
+  --font-display:"Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body:"Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono:ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.55}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible, [tabindex]:focus-visible, textarea:focus-visible, select:focus-visible{outline:3px solid var(--saffron);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+
+/* ---------- header ---------- */
+header{max-width:1060px;margin:0 auto;padding:34px 22px 10px}
+.wordmark{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.wordmark h1{font-family:var(--font-display);font-weight:700;font-size:clamp(30px,5vw,44px);letter-spacing:-0.02em}
+.wordmark h1 .link{color:var(--cobalt)}
+.greeting{font-family:var(--font-display);font-size:clamp(16px,2.4vw,22px);color:var(--ink-soft);min-width:9ch}
+.greeting b{color:var(--saffron);font-weight:700}
+.tagline{margin-top:6px;color:var(--ink-soft);max-width:56ch}
+
+/* ---------- shell ---------- */
+main{max-width:1060px;margin:0 auto;padding:18px 22px 80px;display:grid;grid-template-columns:340px 1fr;gap:22px}
+@media (max-width:860px){ main{grid-template-columns:1fr} }
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+.panel h2{font-family:var(--font-display);font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--ink-soft);margin-bottom:12px}
+
+/* ---------- language picker ---------- */
+.count-pill{float:right;font-family:var(--font-mono);font-size:12px;background:var(--paper);border:1px solid var(--line);padding:2px 9px;border-radius:99px;color:var(--ink-soft)}
+.count-pill.full{background:var(--saffron);border-color:var(--saffron);color:var(--ink)}
+.langs{display:flex;flex-wrap:wrap;gap:8px}
+.lang-chip{display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:7px 12px;transition:all .12s ease}
+.lang-chip .endo{font-weight:600;font-size:14px}
+.lang-chip .code{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em}
+.lang-chip:hover{border-color:var(--cobalt)}
+.lang-chip[aria-pressed="true"]{background:var(--cobalt);border-color:var(--cobalt);color:#fff}
+.lang-chip[aria-pressed="true"] .code{color:#C8D2FF}
+.lang-chip:disabled{opacity:.35;cursor:not-allowed}
+.picker-note{margin-top:12px;font-size:13px;color:var(--ink-soft)}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:6px;margin-bottom:16px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:5px}
+.tab{flex:1;border:none;background:transparent;border-radius:8px;padding:10px 6px;font-family:var(--font-display);font-weight:500;font-size:15px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;gap:8px}
+.tab[aria-selected="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(14,27,61,.12);font-weight:700}
+.tab svg{width:17px;height:17px;flex:none}
+
+.mode{display:none}
+.mode.active{display:block}
+
+/* ---------- text mode ---------- */
+textarea{width:100%;min-height:130px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:14px;font-family:var(--font-body);font-size:16px;color:var(--ink);background:var(--paper)}
+textarea::placeholder{color:#9AA4BC}
+.row{display:flex;gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap}
+.btn{border:none;border-radius:10px;padding:11px 20px;font-weight:600;font-size:15px;display:inline-flex;align-items:center;gap:9px}
+.btn svg{width:16px;height:16px}
+.btn-primary{background:var(--cobalt);color:#fff}
+.btn-primary:hover{background:var(--cobalt-deep)}
+.btn-primary:disabled{background:#B9C2DE;cursor:not-allowed}
+.btn-ghost{background:var(--paper);border:1px solid var(--line);color:var(--ink)}
+.btn-ghost:hover{border-color:var(--cobalt);color:var(--cobalt)}
+.btn-danger{background:var(--rose);color:#fff}
+.hint{font-size:13px;color:var(--ink-soft)}
+
+/* ---------- voice mode ---------- */
+.mic-stage{display:flex;flex-direction:column;align-items:center;gap:14px;padding:10px 0 4px}
+.mic-btn{width:84px;height:84px;border-radius:50%;border:none;background:var(--cobalt);color:#fff;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.mic-btn svg{width:34px;height:34px}
+.mic-btn:hover{background:var(--cobalt-deep)}
+.mic-btn.live{background:var(--rose);animation:pulse 1.4s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(226,61,61,.45)}70%{box-shadow:0 0 0 20px rgba(226,61,61,0)}100%{box-shadow:0 0 0 0 rgba(226,61,61,0)}}
+.mic-status{font-family:var(--font-display);font-weight:500;color:var(--ink-soft);font-size:15px;text-align:center}
+.mic-status.live{color:var(--rose);font-weight:700}
+.interim{width:100%;min-height:52px;border:1px dashed var(--line);border-radius:10px;padding:12px 14px;color:var(--ink-soft);font-style:italic;background:var(--paper)}
+.speech-lang{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink-soft)}
+.speech-lang select{border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-family:var(--font-body);font-size:14px;background:var(--card);color:var(--ink)}
+
+/* ---------- capture mode ---------- */
+.cap-stage{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--paper);display:none}
+.cap-stage.visible{display:block}
+.cap-stage img{display:block;width:100%;user-select:none;-webkit-user-drag:none}
+.cap-overlay{position:absolute;inset:0;cursor:crosshair}
+.cap-rect{position:absolute;border:2px solid var(--saffron);background:rgba(242,165,12,.16);pointer-events:none;display:none}
+.cap-help{font-size:13px;color:var(--ink-soft);margin-top:10px}
+
+/* ---------- results ledger ---------- */
+.ledger{margin-top:20px}
+.source-line{font-size:13px;color:var(--ink-soft);margin-bottom:10px}
+.source-line b{color:var(--ink)}
+.entry{border:1px solid var(--line);border-left:5px solid var(--cobalt);border-radius:10px;background:var(--card);padding:14px 16px;margin-bottom:10px;animation:rise .28s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.entry .lang-line{display:flex;align-items:baseline;gap:10px;margin-bottom:5px}
+.entry .endonym{font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--cobalt)}
+.entry .code{font-family:var(--font-mono);font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.07em}
+.entry .copy{margin-left:auto;border:none;background:none;color:var(--ink-soft);font-size:12.5px;padding:2px 6px;border-radius:6px}
+.entry .copy:hover{color:var(--cobalt);background:var(--paper)}
+.entry .text{font-size:17px;line-height:1.6}
+.entry[dir="rtl"] .text{text-align:right}
+.block-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin:18px 0 8px;border-top:1px dashed var(--line);padding-top:12px}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:26px;text-align:center;color:var(--ink-soft);font-size:14.5px}
+.spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-bar{display:none;margin-top:12px;background:#FBEAEA;border:1px solid #EFC1C1;color:#8A1F1F;border-radius:10px;padding:11px 14px;font-size:14px}
+.error-bar.visible{display:block}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">
+    <h1>Language<span class="link">Link</span></h1>
+    <div class="greeting" aria-hidden="true"><b id="greetWord">Hello</b></div>
+  </div>
+  <p class="tagline">Type it, say it, or grab it off your screen — LanguageLink translates into up to five languages at once.</p>
+</header>
+
+<main>
+  <!-- ====== LEFT: language picker ====== -->
+  <section class="panel" aria-label="Target languages">
+    <h2>Translate into <span class="count-pill" id="countPill">0 / 5</span></h2>
+    <div class="langs" id="langChips"></div>
+    <p class="picker-note" id="pickerNote">Pick 1–5 languages. Every translation goes to all of them.</p>
+  </section>
+
+  <!-- ====== RIGHT: input modes + results ====== -->
+  <section class="panel" aria-label="Translate">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-text" aria-selected="true" data-mode="text">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V5h16v2M12 5v14m-3 0h6"/></svg>
+        Text
+      </button>
+      <button class="tab" role="tab" id="tab-voice" aria-selected="false" data-mode="voice">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        Voice
+      </button>
+      <button class="tab" role="tab" id="tab-capture" aria-selected="false" data-mode="capture">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h4l2-2h6l2 2h4v12H3zM12 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/></svg>
+        Capture
+      </button>
+    </div>
+
+    <!-- TEXT MODE -->
+    <div class="mode active" id="mode-text">
+      <textarea id="textInput" placeholder="Type or paste anything — a sentence, a paragraph, a menu, a message…"></textarea>
+      <div class="row">
+        <button class="btn btn-primary" id="translateBtn">
+          <span id="translateBtnLabel">Translate</span>
+        </button>
+        <span class="hint">Source language is detected automatically.</span>
+      </div>
+    </div>
+
+    <!-- VOICE MODE -->
+    <div class="mode" id="mode-voice">
+      <div class="mic-stage">
+        <button class="mic-btn" id="micBtn" aria-label="Start listening">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        </button>
+        <div class="mic-status" id="micStatus">Tap the mic and start talking — each sentence is translated as you speak.</div>
+        <div class="speech-lang">
+          <label for="speechLang">I'll be speaking:</label>
+          <select id="speechLang">
+            <option value="en-US" selected>English</option>
+            <option value="zh-CN">中文 (Mandarin)</option>
+            <option value="es-ES">Español</option>
+            <option value="fr-FR">Français</option>
+            <option value="de-DE">Deutsch</option>
+            <option value="ja-JP">日本語</option>
+            <option value="ko-KR">한국어</option>
+            <option value="pt-BR">Português</option>
+            <option value="hi-IN">हिन्दी</option>
+            <option value="ar-SA">العربية</option>
+            <option value="ru-RU">Русский</option>
+            <option value="it-IT">Italiano</option>
+          </select>
+        </div>
+        <div class="interim" id="interimBox">Live transcript appears here…</div>
+      </div>
+    </div>
+
+    <!-- CAPTURE MODE -->
+    <div class="mode" id="mode-capture">
+      <div class="row" style="margin-top:0">
+        <button class="btn btn-primary" id="captureBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h4l2-2h6l2 2h4v12H3zM12 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/></svg>
+          Capture my screen
+        </button>
+        <button class="btn btn-ghost" id="retakeBtn" style="display:none">Retake</button>
+      </div>
+      <p class="cap-help" id="capHelp">Your browser will ask which screen, window, or tab to share. LanguageLink grabs one snapshot — nothing is recorded.</p>
+      <div class="cap-stage" id="capStage">
+        <img id="capImg" alt="Screen snapshot">
+        <div class="cap-overlay" id="capOverlay">
+          <div class="cap-rect" id="capRect"></div>
+        </div>
+      </div>
+      <div class="row" id="capActionRow" style="display:none">
+        <button class="btn btn-primary" id="capTranslateBtn" disabled>Translate selection</button>
+        <span class="hint">Drag over the part you want translated.</span>
+      </div>
+    </div>
+
+    <div class="error-bar" id="errorBar"></div>
+
+    <!-- RESULTS -->
+    <div class="ledger" id="ledger">
+      <div class="empty" id="emptyState">Translations will collect here, newest first — one card per language.</div>
+    </div>
+  </section>
+</main>
+
+<canvas id="workCanvas" style="display:none"></canvas>
+
+<script>
+/* =========================================================
+   LanguageLink
+   ========================================================= */
+
+// ---------- language catalogue ----------
+const LANGUAGES = [
+  { code:"es", name:"Spanish",    endonym:"Español" },
+  { code:"fr", name:"French",     endonym:"Français" },
+  { code:"zh", name:"Chinese (Simplified)", endonym:"中文" },
+  { code:"ja", name:"Japanese",   endonym:"日本語" },
+  { code:"ko", name:"Korean",     endonym:"한국어" },
+  { code:"de", name:"German",     endonym:"Deutsch" },
+  { code:"pt", name:"Portuguese", endonym:"Português" },
+  { code:"it", name:"Italian",    endonym:"Italiano" },
+  { code:"hi", name:"Hindi",      endonym:"हिन्दी" },
+  { code:"ar", name:"Arabic",     endonym:"العربية", rtl:true },
+  { code:"ru", name:"Russian",    endonym:"Русский" },
+  { code:"vi", name:"Vietnamese", endonym:"Tiếng Việt" },
+  { code:"tr", name:"Turkish",    endonym:"Türkçe" },
+  { code:"nl", name:"Dutch",      endonym:"Nederlands" },
+  { code:"pl", name:"Polish",     endonym:"Polski" },
+  { code:"th", name:"Thai",       endonym:"ไทย" },
+  { code:"he", name:"Hebrew",     endonym:"עברית", rtl:true },
+  { code:"en", name:"English",    endonym:"English" }
+];
+const MAX_LANGS = 5;
+let selected = ["es", "fr", "zh"]; // friendly defaults
+
+// ---------- cycling greeting ----------
+const GREETINGS = ["Hello","Hola","Bonjour","你好","こんにちは","안녕하세요","Hallo","Olá","नमस्ते","مرحبا","Привет","Ciao"];
+let gi = 0;
+setInterval(() => {
+  gi = (gi + 1) % GREETINGS.length;
+  document.getElementById("greetWord").textContent = GREETINGS[gi];
+}, 2200);
+
+// ---------- language picker ----------
+const chipsEl = document.getElementById("langChips");
+const countPill = document.getElementById("countPill");
+
+function renderChips(){
+  chipsEl.innerHTML = "";
+  LANGUAGES.forEach(l => {
+    const on = selected.includes(l.code);
+    const b = document.createElement("button");
+    b.className = "lang-chip";
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.disabled = !on && selected.length >= MAX_LANGS;
+    b.innerHTML = '<span class="endo">' + l.endonym + '</span><span class="code">' + l.code + ' · ' + l.name + '</span>';
+    b.onclick = () => {
+      if (on) selected = selected.filter(c => c !== l.code);
+      else if (selected.length < MAX_LANGS) selected.push(l.code);
+      renderChips();
+    };
+    chipsEl.appendChild(b);
+  });
+  countPill.textContent = selected.length + " / " + MAX_LANGS;
+  countPill.classList.toggle("full", selected.length === MAX_LANGS);
+}
+renderChips();
+
+// ---------- tabs ----------
+document.querySelectorAll(".tab").forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", "false"));
+    t.setAttribute("aria-selected", "true");
+    document.querySelectorAll(".mode").forEach(m => m.classList.remove("active"));
+    document.getElementById("mode-" + t.dataset.mode).classList.add("active");
+    if (t.dataset.mode !== "voice" && listening) stopListening();
+  };
+});
+
+// ---------- error helper ----------
+const errorBar = document.getElementById("errorBar");
+function showError(msg){
+  errorBar.textContent = msg;
+  errorBar.classList.add("visible");
+  clearTimeout(showError._t);
+  showError._t = setTimeout(() => errorBar.classList.remove("visible"), 7000);
+}
+
+// ---------- results ledger ----------
+const ledger = document.getElementById("ledger");
+const emptyState = document.getElementById("emptyState");
+let blockCounter = 0;
+
+function langMeta(code){
+  return LANGUAGES.find(l => l.code === code) || { code, name:code, endonym:code };
+}
+
+function addResultBlock(sourceLabel, sourceText, translations, kind){
+  emptyState.style.display = "none";
+  blockCounter++;
+  const wrap = document.createElement("div");
+
+  const label = document.createElement("div");
+  label.className = "block-label";
+  const kindNames = { text:"Typed", voice:"Spoken", capture:"Captured" };
+  label.textContent = "#" + blockCounter + " · " + (kindNames[kind] || "Input");
+  wrap.appendChild(label);
+
+  const src = document.createElement("div");
+  src.className = "source-line";
+  src.innerHTML = "";
+  const b = document.createElement("b");
+  b.textContent = sourceLabel;
+  src.appendChild(b);
+  src.appendChild(document.createTextNode(" — " + sourceText));
+  wrap.appendChild(src);
+
+  Object.entries(translations).forEach(([code, text]) => {
+    const meta = langMeta(code);
+    const card = document.createElement("div");
+    card.className = "entry";
+    if (meta.rtl) card.setAttribute("dir", "rtl");
+
+    const line = document.createElement("div");
+    line.className = "lang-line";
+    line.setAttribute("dir", "ltr");
+    const endo = document.createElement("span");
+    endo.className = "endonym";
+    endo.textContent = meta.endonym;
+    const cd = document.createElement("span");
+    cd.className = "code";
+    cd.textContent = meta.name;
+    const cp = document.createElement("button");
+    cp.className = "copy";
+    cp.textContent = "Copy";
+    cp.onclick = () => {
+      navigator.clipboard.writeText(text).then(() => {
+        cp.textContent = "Copied";
+        setTimeout(() => cp.textContent = "Copy", 1400);
+      });
+    };
+    line.append(endo, cd, cp);
+
+    const tx = document.createElement("div");
+    tx.className = "text";
+    tx.textContent = text;
+
+    card.append(line, tx);
+    wrap.appendChild(card);
+  });
+
+  // newest first: insert right after the (hidden) empty state
+  ledger.insertBefore(wrap, emptyState.nextSibling);
+}
+
+// ---------- Claude API ----------
+async function callClaude(content){
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      messages: [{ role: "user", content }]
+    })
+  });
+  if (!response.ok) throw new Error("Translation service returned " + response.status);
+  const data = await response.json();
+  const text = (data.content || []).filter(i => i.type === "text").map(i => i.text).join("\n");
+  const clean = text.replace(/```json|```/g, "").trim();
+  return JSON.parse(clean);
+}
+
+function targetSpec(){
+  return selected.map(c => {
+    const m = langMeta(c);
+    return '"' + c + '" (' + m.name + ')';
+  }).join(", ");
+}
+
+function translationPrompt(text){
+  return "You are the translation engine for LanguageLink.\n" +
+    "Translate the text below into each of these target languages: " + targetSpec() + ".\n" +
+    "Detect the source language yourself. Keep tone, names, and numbers intact. If the text is already in a target language, still include that language with the text unchanged.\n" +
+    "Respond with ONLY a raw JSON object, no markdown fences, no commentary, exactly in this shape:\n" +
+    '{"detected_source":"<English name of source language>","translations":{"<code>":"<translation>", ...}}\n\n' +
+    "TEXT:\n" + text;
+}
+
+async function translateAndRender(text, kind){
+  if (!selected.length){ showError("Pick at least one target language first."); return; }
+  const result = await callClaude(translationPrompt(text));
+  const ordered = {};
+  selected.forEach(c => { if (result.translations && result.translations[c] != null) ordered[c] = result.translations[c]; });
+  addResultBlock("Detected: " + (result.detected_source || "unknown"), text, ordered, kind);
+}
+
+// =========================================================
+// 1) TEXT MODE
+// =========================================================
+const translateBtn = document.getElementById("translateBtn");
+const translateBtnLabel = document.getElementById("translateBtnLabel");
+translateBtn.onclick = async () => {
+  const text = document.getElementById("textInput").value.trim();
+  if (!text){ showError("Type something to translate first."); return; }
+  translateBtn.disabled = true;
+  translateBtnLabel.innerHTML = '<span class="spinner"></span>';
+  try {
+    await translateAndRender(text, "text");
+  } catch (e) {
+    console.error(e);
+    showError("Couldn't translate that — please try again.");
+  } finally {
+    translateBtn.disabled = false;
+    translateBtnLabel.textContent = "Translate";
+  }
+};
+
+// =========================================================
+// 2) VOICE MODE — speak, auto-translate each utterance
+// =========================================================
+const micBtn = document.getElementById("micBtn");
+const micStatus = document.getElementById("micStatus");
+const interimBox = document.getElementById("interimBox");
+const speechLangSel = document.getElementById("speechLang");
+let recognition = null;
+let listening = false;
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function startListening(){
+  if (!SR){
+    showError("Live speech isn't supported in this browser — Chrome or Edge works best. You can still use Text and Capture.");
+    return;
+  }
+  recognition = new SR();
+  recognition.lang = speechLangSel.value;
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.onresult = async (ev) => {
+    let interim = "";
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const r = ev.results[i];
+      if (r.isFinal) {
+        const phrase = r[0].transcript.trim();
+        interimBox.textContent = "…";
+        if (phrase) {
+          micStatus.textContent = "Translating: “" + phrase.slice(0, 60) + (phrase.length > 60 ? "…" : "") + "”";
+          try { await translateAndRender(phrase, "voice"); }
+          catch(e){ console.error(e); showError("Couldn't translate that phrase — keep talking, I'll catch the next one."); }
+          if (listening) { micStatus.textContent = "Listening — keep talking."; micStatus.classList.add("live"); }
+        }
+      } else {
+        interim += r[0].transcript;
+      }
+    }
+    if (interim) interimBox.textContent = interim;
+  };
+
+  recognition.onerror = (ev) => {
+    if (ev.error === "not-allowed") {
+      showError("Microphone access was blocked. Allow the mic in your browser's site settings, then try again.");
+      stopListening();
+    } else if (ev.error === "no-speech") {
+      // harmless; recognition will restart via onend
+    } else {
+      console.warn("speech error:", ev.error);
+    }
+  };
+
+  recognition.onend = () => {
+    // Chrome stops after silence — restart while the user still wants to listen
+    if (listening) { try { recognition.start(); } catch(_){} }
+  };
+
+  try { recognition.start(); } catch(e){ showError("Couldn't start the microphone."); return; }
+  listening = true;
+  micBtn.classList.add("live");
+  micBtn.setAttribute("aria-label", "Stop listening");
+  micStatus.textContent = "Listening — keep talking.";
+  micStatus.classList.add("live");
+  interimBox.textContent = "…";
+}
+
+function stopListening(){
+  listening = false;
+  if (recognition) { recognition.onend = null; try { recognition.stop(); } catch(_){} }
+  micBtn.classList.remove("live");
+  micBtn.setAttribute("aria-label", "Start listening");
+  micStatus.textContent = "Tap the mic and start talking — each sentence is translated as you speak.";
+  micStatus.classList.remove("live");
+  interimBox.textContent = "Live transcript appears here…";
+}
+
+micBtn.onclick = () => listening ? stopListening() : startListening();
+speechLangSel.onchange = () => { if (listening) { stopListening(); startListening(); } };
+
+// =========================================================
+// 3) CAPTURE MODE — screenshot, drag-select with mouse, translate
+// =========================================================
+const captureBtn = document.getElementById("captureBtn");
+const retakeBtn = document.getElementById("retakeBtn");
+const capStage = document.getElementById("capStage");
+const capImg = document.getElementById("capImg");
+const capOverlay = document.getElementById("capOverlay");
+const capRect = document.getElementById("capRect");
+const capActionRow = document.getElementById("capActionRow");
+const capTranslateBtn = document.getElementById("capTranslateBtn");
+const capHelp = document.getElementById("capHelp");
+const workCanvas = document.getElementById("workCanvas");
+
+let snapshot = null;           // full-resolution ImageBitmap-ish (canvas)
+let selection = null;          // {x, y, w, h} in displayed-image pixels
+
+async function captureScreen(){
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia){
+    showError("Screen capture isn't supported in this browser. Chrome, Edge, or Firefox on desktop works best.");
+    return;
+  }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5 }, audio: false });
+  } catch(e) {
+    showError("Screen sharing was cancelled or blocked.");
+    return;
+  }
+  const video = document.createElement("video");
+  video.srcObject = stream;
+  await video.play();
+  // give the stream a moment to deliver a real frame
+  await new Promise(r => setTimeout(r, 350));
+
+  workCanvas.width = video.videoWidth;
+  workCanvas.height = video.videoHeight;
+  workCanvas.getContext("2d").drawImage(video, 0, 0);
+  stream.getTracks().forEach(t => t.stop());
+
+  capImg.src = workCanvas.toDataURL("image/png");
+  capStage.classList.add("visible");
+  capActionRow.style.display = "flex";
+  retakeBtn.style.display = "inline-flex";
+  capHelp.textContent = "Snapshot taken. Drag your mouse over the region you want translated, then hit Translate selection.";
+  selection = null;
+  capRect.style.display = "none";
+  capTranslateBtn.disabled = true;
+}
+captureBtn.onclick = captureScreen;
+retakeBtn.onclick = captureScreen;
+
+// --- drag-to-select (mouse + touch via pointer events) ---
+let dragStart = null;
+capOverlay.addEventListener("pointerdown", (e) => {
+  const r = capOverlay.getBoundingClientRect();
+  dragStart = { x: e.clientX - r.left, y: e.clientY - r.top };
+  capOverlay.setPointerCapture(e.pointerId);
+  capRect.style.display = "block";
+  updateRect(dragStart.x, dragStart.y, 0, 0);
+});
+capOverlay.addEventListener("pointermove", (e) => {
+  if (!dragStart) return;
+  const r = capOverlay.getBoundingClientRect();
+  const cx = Math.min(Math.max(e.clientX - r.left, 0), r.width);
+  const cy = Math.min(Math.max(e.clientY - r.top, 0), r.height);
+  const x = Math.min(dragStart.x, cx), y = Math.min(dragStart.y, cy);
+  const w = Math.abs(cx - dragStart.x), h = Math.abs(cy - dragStart.y);
+  updateRect(x, y, w, h);
+  selection = { x, y, w, h };
+});
+capOverlay.addEventListener("pointerup", () => {
+  dragStart = null;
+  if (selection && selection.w > 8 && selection.h > 8) {
+    capTranslateBtn.disabled = false;
+  } else {
+    selection = null;
+    capRect.style.display = "none";
+    capTranslateBtn.disabled = true;
+  }
+});
+function updateRect(x, y, w, h){
+  capRect.style.left = x + "px";
+  capRect.style.top = y + "px";
+  capRect.style.width = w + "px";
+  capRect.style.height = h + "px";
+}
+
+capTranslateBtn.onclick = async () => {
+  if (!selection){ showError("Drag over the area you want translated first."); return; }
+  if (!selected.length){ showError("Pick at least one target language first."); return; }
+
+  // map displayed selection -> full-resolution snapshot pixels
+  const scaleX = workCanvas.width / capImg.clientWidth;
+  const scaleY = workCanvas.height / capImg.clientHeight;
+  const sx = Math.round(selection.x * scaleX);
+  const sy = Math.round(selection.y * scaleY);
+  const sw = Math.max(1, Math.round(selection.w * scaleX));
+  const sh = Math.max(1, Math.round(selection.h * scaleY));
+
+  const crop = document.createElement("canvas");
+  crop.width = sw; crop.height = sh;
+  crop.getContext("2d").drawImage(workCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+  const base64 = crop.toDataURL("image/png").split(",")[1];
+
+  capTranslateBtn.disabled = true;
+  const oldLabel = capTranslateBtn.textContent;
+  capTranslateBtn.innerHTML = '<span class="spinner"></span>';
+  try {
+    const prompt =
+      "You are the translation engine for LanguageLink. The image is a cropped screenshot.\n" +
+      "1. Extract all readable text from the image (keep its natural reading order).\n" +
+      "2. Translate that text into each of these target languages: " + targetSpec() + ".\n" +
+      "Respond with ONLY a raw JSON object, no markdown fences:\n" +
+      '{"extracted_text":"<text found in image>","detected_source":"<English name of source language>","translations":{"<code>":"<translation>", ...}}\n' +
+      'If the image contains no readable text, respond {"extracted_text":"","detected_source":"none","translations":{}}.';
+    const result = await callClaude([
+      { type: "image", source: { type: "base64", media_type: "image/png", data: base64 } },
+      { type: "text", text: prompt }
+    ]);
+    if (!result.extracted_text) {
+      showError("I couldn't find readable text in that selection — try dragging a tighter box around the words.");
+    } else {
+      const ordered = {};
+      selected.forEach(c => { if (result.translations && result.translations[c] != null) ordered[c] = result.translations[c]; });
+      addResultBlock("Detected: " + (result.detected_source || "unknown"), result.extracted_text, ordered, "capture");
+    }
+  } catch(e) {
+    console.error(e);
+    showError("Couldn't translate the capture — please try again.");
+  } finally {
+    capTranslateBtn.disabled = false;
+    capTranslateBtn.textContent = oldLabel;
+  }
+};
+</script>
+</body>
+</html>
