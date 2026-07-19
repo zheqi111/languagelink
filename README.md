@@ -2,35 +2,58 @@
 
 Translate anything — typed, spoken, or captured off your screen — into up to **5 languages at once**.
 
-LanguageLink is a single-file web app (`index.html`, no build step, no dependencies) with three input modes:
-
 | Mode | What it does |
 |------|--------------|
 | **Text** | Type or paste anything; source language is auto-detected and translated into every selected target language. |
 | **Voice** | Tap the mic and talk. Each finished sentence is transcribed live (Web Speech API) and auto-translated as you speak. |
 | **Capture** | Take a snapshot of your screen (Screen Capture API), drag your mouse over any region, and the text inside is extracted and translated. |
 
-Translation and image text extraction are powered by the Anthropic Claude API.
+Translation and image text extraction are powered by the Anthropic Claude API, proxied through a small Express backend so the API key never touches the browser.
 
-## Features
-
-- Pick 1–5 target languages from an 18-language catalogue, shown by their native names (Español, 中文, العربية, …)
-- Automatic source-language detection
-- Right-to-left rendering for Arabic and Hebrew
-- Results collect as a running ledger, newest first, with per-card copy buttons
-- One HTML file — open it and go
-
-## Running it
-
-Open `index.html` in a browser, or serve the folder locally:
+## Quick start
 
 ```bash
-# any static server works, e.g.
-python3 -m http.server 8000
-# then visit http://localhost:8000
+git clone https://github.com/zheqi111/languagelink.git
+cd languagelink
+npm install
+cp .env.example .env      # then open .env and paste your Anthropic API key
+npm start
 ```
 
-> **Note:** the app calls the Anthropic API endpoint directly and is designed to run inside environments that inject API authentication (e.g. Claude artifacts). To run it fully standalone, add your own API key handling — ideally through a small backend proxy so the key is never exposed in the browser.
+Visit **http://localhost:3000**. Get an API key at https://console.anthropic.com/settings/keys.
+
+Requires **Node.js 18+** (uses built-in `fetch`).
+
+## Project structure
+
+```
+languagelink/
+├── public/
+│   └── index.html    # the whole frontend: markup, styles, and logic
+├── server.js         # Express backend: static serving + Anthropic API proxy
+├── package.json
+├── .env.example      # copy to .env and add ANTHROPIC_API_KEY
+└── README.md
+```
+
+## API
+
+### `POST /api/translate`
+```json
+{ "text": "Hello, how are you?", "targets": ["es", "fr", "zh"] }
+```
+Returns `{ "detected_source": "English", "translations": { "es": "…", "fr": "…", "zh": "…" } }`
+
+### `POST /api/translate-image`
+```json
+{ "image": "<base64 png>", "media_type": "image/png", "targets": ["es"] }
+```
+Returns `{ "extracted_text": "…", "detected_source": "…", "translations": { … } }`
+
+### `GET /api/health`
+Returns `{ "ok": true, "model": "claude-sonnet-4-6" }`
+
+The backend enforces: 1–5 valid target languages, 5,000-character text limit, PNG/JPEG/WebP images only, and a light rate limit of 30 requests/minute per IP.
 
 ## Browser support
 
@@ -42,11 +65,12 @@ python3 -m http.server 8000
 
 Voice needs microphone permission; Capture asks which screen, window, or tab to share and grabs a single frame (nothing is recorded).
 
-## Project structure
+## Configuration
 
-```
-languagelink/
-├── index.html   # the whole app: markup, styles, and logic
-├── README.md
-└── .gitignore
-```
+Set in `.env`:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `ANTHROPIC_API_KEY` | — (required) | Your Anthropic API key |
+| `PORT` | `3000` | Server port |
+| `CLAUDE_MODEL` | `claude-sonnet-4-6` | Model used for translation |

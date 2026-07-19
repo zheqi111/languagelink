@@ -1,0 +1,19 @@
+{
+  "name": "languagelink",
+  "version": "1.0.0",
+  "description": "Translate anything — typed, spoken, or captured off your screen — into up to 5 languages at once.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "author": "zheqi111",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}

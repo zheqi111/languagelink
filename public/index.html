@@ -381,43 +381,21 @@ function addResultBlock(sourceLabel, sourceText, translations, kind){
   ledger.insertBefore(wrap, emptyState.nextSibling);
 }
 
-// ---------- Claude API ----------
-async function callClaude(content){
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+// ---------- backend API ----------
+async function api(path, payload){
+  const response = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1000,
-      messages: [{ role: "user", content }]
-    })
+    body: JSON.stringify(payload)
   });
-  if (!response.ok) throw new Error("Translation service returned " + response.status);
-  const data = await response.json();
-  const text = (data.content || []).filter(i => i.type === "text").map(i => i.text).join("\n");
-  const clean = text.replace(/```json|```/g, "").trim();
-  return JSON.parse(clean);
-}
-
-function targetSpec(){
-  return selected.map(c => {
-    const m = langMeta(c);
-    return '"' + c + '" (' + m.name + ')';
-  }).join(", ");
-}
-
-function translationPrompt(text){
-  return "You are the translation engine for LanguageLink.\n" +
-    "Translate the text below into each of these target languages: " + targetSpec() + ".\n" +
-    "Detect the source language yourself. Keep tone, names, and numbers intact. If the text is already in a target language, still include that language with the text unchanged.\n" +
-    "Respond with ONLY a raw JSON object, no markdown fences, no commentary, exactly in this shape:\n" +
-    '{"detected_source":"<English name of source language>","translations":{"<code>":"<translation>", ...}}\n\n' +
-    "TEXT:\n" + text;
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || ("Request failed (" + response.status + ")"));
+  return data;
 }
 
 async function translateAndRender(text, kind){
   if (!selected.length){ showError("Pick at least one target language first."); return; }
-  const result = await callClaude(translationPrompt(text));
+  const result = await api("/api/translate", { text, targets: selected });
   const ordered = {};
   selected.forEach(c => { if (result.translations && result.translations[c] != null) ordered[c] = result.translations[c]; });
   addResultBlock("Detected: " + (result.detected_source || "unknown"), text, ordered, kind);
@@ -437,7 +415,7 @@ translateBtn.onclick = async () => {
     await translateAndRender(text, "text");
   } catch (e) {
     console.error(e);
-    showError("Couldn't translate that — please try again.");
+    showError(e.message || "Couldn't translate that — please try again.");
   } finally {
     translateBtn.disabled = false;
     translateBtnLabel.textContent = "Translate";
@@ -633,17 +611,11 @@ capTranslateBtn.onclick = async () => {
   const oldLabel = capTranslateBtn.textContent;
   capTranslateBtn.innerHTML = '<span class="spinner"></span>';
   try {
-    const prompt =
-      "You are the translation engine for LanguageLink. The image is a cropped screenshot.\n" +
-      "1. Extract all readable text from the image (keep its natural reading order).\n" +
-      "2. Translate that text into each of these target languages: " + targetSpec() + ".\n" +
-      "Respond with ONLY a raw JSON object, no markdown fences:\n" +
-      '{"extracted_text":"<text found in image>","detected_source":"<English name of source language>","translations":{"<code>":"<translation>", ...}}\n' +
-      'If the image contains no readable text, respond {"extracted_text":"","detected_source":"none","translations":{}}.';
-    const result = await callClaude([
-      { type: "image", source: { type: "base64", media_type: "image/png", data: base64 } },
-      { type: "text", text: prompt }
-    ]);
+    const result = await api("/api/translate-image", {
+      image: base64,
+      media_type: "image/png",
+      targets: selected
+    });
     if (!result.extracted_text) {
       showError("I couldn't find readable text in that selection — try dragging a tighter box around the words.");
     } else {
@@ -653,7 +625,7 @@ capTranslateBtn.onclick = async () => {
     }
   } catch(e) {
     console.error(e);
-    showError("Couldn't translate the capture — please try again.");
+    showError(e.message || "Couldn't translate the capture — please try again.");
   } finally {
     capTranslateBtn.disabled = false;
     capTranslateBtn.textContent = oldLabel;
